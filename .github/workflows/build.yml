@@ -15,9 +15,13 @@ jobs:
 
       - name: Accept Android SDK Licenses
         run: |
-          mkdir -p "$ANDROID_HOME/licenses"
-          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license"
-          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_HOME/licenses/android-sdk-preview-license"
+          for sdk_dir in "$ANDROID_HOME" "$ANDROID_SDK_ROOT" "/usr/local/lib/android/sdk"; do
+            if [ -d "$sdk_dir" ]; then
+              mkdir -p "$sdk_dir/licenses"
+              echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$sdk_dir/licenses/android-sdk-license"
+              echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > "$sdk_dir/licenses/android-sdk-preview-license"
+            fi
+          done
 
       - name: Generate Full Android Project
         run: |
@@ -193,8 +197,3 @@ jobs:
 
               override fun onAccuracyChanged(s: Sensor?, a: Int) {}
               override fun onAccessibilityEvent(e: AccessibilityEvent?) {}
-              override fun onDestroy() { super.onDestroy(); sensorManager.unregisterListener(this) }
-          }
-          EOF
-
-      - run: gradle assembleDebug --stacktrace
