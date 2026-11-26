@@ -23,7 +23,7 @@ jobs:
           printf '%s\n' '<?xml version="1.0" encoding="utf-8"?>' '<resources><string name="app_name">MC 陀螺儀瞄準</string><string name="service_desc">MC 陀螺儀體感瞄準輔助</string></resources>' > app/src/main/res/values/strings.xml
           echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPG1hbmlmZXN0IHhtbG5zOmFuZHJvaWQ9Imh0dHA6Ly9zY2hlbWFzLmFuZHJvaWQuY29tL2Fway9yZXMvYW5kcm9pZCI+CiAgICA8YXBwbGljYXRpb24gYW5kcm9pZDpsYWJlbD0iQHN0cmluZy9hcHBfbmFtZSIgYW5kcm9pZDp0aGVtZT0iQHN0eWxlL1RoZW1lLkFwcENvbXBhdC5EYXlOaWdodC5EYXJrQWN0aW9uQmFyIj4KICAgICAgICA8YWN0aXZpdHkgYW5kcm9pZDpuYW1lPSIuTWFpbkFjdGl2aXR5IiBhbmRyb2lkOmV4cG9ydGVkPSJ0cnVlIj4KICAgICAgICAgICAgPGludGVudC1maWx0ZXI+CiAgICAgICAgICAgICAgICA8YWN0aW9uIGFuZHJvaWQ6bmFtZT0iYW5kcm9pZC5pbnRlbnQuYWN0aW9uLk1BSU4iIC8+CiAgICAgICAgICAgICAgICA8Y2F0ZWdvcnkgYW5kcm9pZDpuYW1lPSJhbmRyb2lkLmludGVudC5jYXRlZ29yeS5MQVVOQ0hFUiIgLz4KICAgICAgICAgICAgPC9pbnRlbnQtZmlsdGVyPgogICAgICAgIDwvYWN0aXZpdHk+CiAgICAgICAgPHNlcnZpY2UgYW5kcm9pZDpuYW1lPSIuR3lyb0FjY2Vzc2liaWxpdHlTZXJ2aWNlIiBhbmRyb2lkOnBlcm1pc3Npb249ImFuZHJvaWQucGVybWlzc2lvbi5CSU5EX0FDQ0VTU0lCSUxJVFlfU0VSVklDRSIgYW5kcm9pZDpleHBvcnRlZD0idHJ1ZSI+CiAgICAgICAgICAgIDxpbnRlbnQtZmlsdGVyPgogICAgICAgICAgICAgICAgPGFjdGlvbiBhbmRyb2lkOm5hbWU9ImFuZHJvaWQuYWNjZXNzaWJpbGl0eXNlcnZpY2UuQWNjZXNzaWJpbGl0eVNlcnZpY2UiIC8+CiAgICAgICAgICAgIDwvaW50ZW50LWZpbHRlcj4KICAgICAgICAgICAgPG1ldGEtZGF0YSBhbmRyb2lkOm5hbWU9ImFuZHJvaWQuYWNjZXNzaWJpbGl0eXNlcnZpY2UiIGFuZHJvaWQ6cmVzb3VyY2U9IkB4bWwvZ3lyb19zZXJ2aWNlX2NvbmZpZyIgLz4KICAgICAgICA8L3NlcnZpY2U+CiAgICA8L2FwcGxpY2F0aW9uPgo8L21hbmlmZXN0Pgo=" | base64 -d > app/src/main/AndroidManifest.xml
           echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPGFjY2Vzc2liaWxpdHktc2VydmljZSB4bWxuczphbmRyb2lkPSJodHRwOi8vc2NoZW1hcy5hbmRyb2lkLmNvbS9hcGsvcmVzL2FuZHJvaWQiCiAgICBhbmRyb2lkOmRlc2NyaXB0aW9uPSJAc3RyaW5nL3NlcnZpY2VfZGVzYyIKICAgIGFuZHJvaWQ6YWNjZXNzaWJpbGl0eUV2ZW50VHlwZXM9InR5cGVXaW5kb3dTdGF0ZUNoYW5nZWQiCiAgICBhbmRyb2lkOmFjY2Vzc2liaWxpdHlGZWVkYmFja1R5cGU9ImZlZWRiYWNrR2VuZXJpYyIKICAgIGFuZHJvaWQ6Y2FuUGVyZm9ybUdlc3R1cmVzPSJ0cnVlIgogICAgYW5kcm9pZDpub3RpZmljYXRpb25UaW1lb3V0PSI1MCIgLz4K" | base64 -d > app/src/main/res/xml/gyro_service_config.xml
-      - name: Generate Smart Touch Yield Build
+      - name: Generate Smooth Self-Filtered Build
         run: |
           cat << 'EOF' > app/src/main/java/com/example/mcgyro/MainActivity.kt
           package com.example.mcgyro
@@ -50,7 +50,7 @@ jobs:
           class GyroAccessibilityService : AccessibilityService(), SensorEventListener {
               private lateinit var sensorManager: SensorManager; private var isSwiping = false
               private var curX = 0f; private var curY = 0f; private var lastStroke: GestureDescription.StrokeDescription? = null; private var idleCount = 0
-              private var lastUserTouchTime = 0L; private var detectorView: View? = null
+              private var lastUserTouchTime = 0L; private var detectorView: View? = null; private var accX = 0f; private var accY = 0f
               override fun onServiceConnected() {
                   super.onServiceConnected()
                   sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -61,9 +61,9 @@ jobs:
                   val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
                   detectorView = object : View(this) {
                       override fun onTouchEvent(e: MotionEvent): Boolean {
-                          if (e.actionMasked == MotionEvent.ACTION_OUTSIDE || e.actionMasked == MotionEvent.ACTION_DOWN) {
+                          if (!isSwiping && (e.actionMasked == MotionEvent.ACTION_OUTSIDE || e.actionMasked == MotionEvent.ACTION_DOWN)) {
                               lastUserTouchTime = SystemClock.uptimeMillis()
-                              lastStroke = null
+                              lastStroke = null; accX = 0f; accY = 0f
                           }
                           return false
                       }
@@ -72,22 +72,25 @@ jobs:
                   try { wm.addView(detectorView, params) } catch (_: Exception) {}
               }
               override fun onSensorChanged(event: SensorEvent?) {
-                  if (event == null || event.sensor.type != Sensor.TYPE_GYROSCOPE || isSwiping) return
+                  if (event == null || event.sensor.type != Sensor.TYPE_GYROSCOPE) return
                   val prefs = getSharedPreferences("gyro_prefs", Context.MODE_PRIVATE); if (!prefs.getBoolean("enabled", true)) return
-                  if (prefs.getBoolean("smartYield", true) && (SystemClock.uptimeMillis() - lastUserTouchTime) < 180L) { lastStroke = null; return }
+                  if (prefs.getBoolean("smartYield", true) && (SystemClock.uptimeMillis() - lastUserTouchTime) < 160L) { lastStroke = null; accX = 0f; accY = 0f; return }
                   val sens = prefs.getInt("sens", 55).toFloat(); val invX = if (prefs.getBoolean("invertX", false)) -1f else 1f; val invY = if (prefs.getBoolean("invertY", false)) -1f else 1f
                   var dx = event.values.getOrElse(0) { 0f } * invX; var dy = event.values.getOrElse(1) { 0f } * invY
-                  if (abs(dx) < 0.03f) dx = 0f; if (abs(dy) < 0.03f) dy = 0f
-                  if (dx == 0f && dy == 0f) { idleCount++; if (idleCount > 12) { lastStroke = null }; return }
-                  idleCount = 0; performContinuousDrag(dx * sens, dy * sens)
+                  if (abs(dx) < 0.025f) dx = 0f; if (abs(dy) < 0.025f) dy = 0f
+                  if (dx != 0f || dy != 0f) { accX += dx * sens * 0.55f; accY += dy * sens * 0.55f; idleCount = 0 }
+                  if (isSwiping) return
+                  if (accX == 0f && accY == 0f) { idleCount++; if (idleCount > 15) { lastStroke = null }; return }
+                  val moveX = accX; val moveY = accY; accX = 0f; accY = 0f
+                  performContinuousDrag(moveX, moveY)
               }
               private fun performContinuousDrag(dx: Float, dy: Float) {
                   val m = resources.displayMetrics; val minX = m.widthPixels * 0.55f; val maxX = m.widthPixels * 0.90f; val minY = m.heightPixels * 0.20f; val maxY = m.heightPixels * 0.80f
                   if (lastStroke == null || curX + dx !in minX..maxX || curY + dy !in minY..maxY) { curX = m.widthPixels * 0.72f; curY = m.heightPixels * 0.50f; lastStroke = null }
                   val nextX = curX + dx; val nextY = curY + dy; val path = Path().apply { moveTo(curX, curY); lineTo(nextX, nextY) }
                   val stroke = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                      if (lastStroke == null) GestureDescription.StrokeDescription(path, 0, 40, true) else lastStroke!!.continueStroke(path, 0, 40, true)
-                  } else { GestureDescription.StrokeDescription(path, 0, 55) }
+                      if (lastStroke == null) GestureDescription.StrokeDescription(path, 0, 24, true) else lastStroke!!.continueStroke(path, 0, 24, true)
+                  } else { GestureDescription.StrokeDescription(path, 0, 35) }
                   curX = nextX; curY = nextY; lastStroke = stroke; isSwiping = true
                   val gesture = GestureDescription.Builder().addStroke(stroke).build()
                   dispatchGesture(gesture, object : GestureResultCallback() { override fun onCompleted(g: GestureDescription?) { isSwiping = false }; override fun onCancelled(g: GestureDescription?) { isSwiping = false; lastStroke = null } }, null)
