@@ -1,0 +1,181 @@
+name: Auto Build MCGyro APK
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.4'
+
+      - name: Generate Full Android Project
+        run: |
+          mkdir -p app/src/main/res/xml app/src/main/java/com/example/mcgyro
+
+          cat << 'EOF' > settings.gradle
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+          rootProject.name = "MCGyroApp"
+          include ':app'
+          EOF
+
+          cat << 'EOF' > build.gradle
+          plugins {
+              id 'com.android.application' version '8.2.0' apply false
+              id 'org.jetbrains.kotlin.android' version '1.9.20' apply false
+          }
+          EOF
+
+          cat << 'EOF' > app/build.gradle
+          plugins {
+              id 'com.android.application'
+              id 'org.jetbrains.kotlin.android'
+          }
+          android {
+              namespace 'com.example.mcgyro'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.example.mcgyro"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+              kotlinOptions { jvmTarget = '17' }
+          }
+          dependencies {
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://android.com">
+              <application android:label="MC 陀螺儀瞄準" android:theme="@style/Theme.AppCompat.DayNight.DarkActionBar">
+                  <activity android:name=".MainActivity" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+                  <service android:name=".GyroAccessibilityService" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="true">
+                      <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+                      <meta-data android:name="android.accessibilityservice" android:resource="@xml/gyro_service_config" />
+                  </service>
+              </application>
+          </manifest>
+          EOF
+
+          cat << 'EOF' > app/src/main/res/xml/gyro_service_config.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <accessibility-service xmlns:android="http://android.com"
+              android:description="@string/app_name"
+              android:accessibilityEventTypes="typeWindowStateChanged"
+              android:accessibilityFeedbackType="feedbackGeneric"
+              android:canPerformGestures="true"
+              android:notificationTimeout="50" />
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/example/mcgyro/MainActivity.kt
+          package com.example.mcgyro
+          import android.content.*
+          import android.os.Bundle
+          import android.provider.Settings
+          import android.widget.*
+          import androidx.appcompat.app.AppCompatActivity
+
+          class MainActivity : AppCompatActivity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  val prefs = getSharedPreferences("gyro_prefs", Context.MODE_PRIVATE)
+                  val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(60, 60, 60, 60) }
+
+                  val sensLabel = TextView(this).apply { text = "陀螺儀靈敏度：${prefs.getInt("sens", 35)}"; textSize = 18f }
+                  val sensSeek = SeekBar(this).apply {
+                      max = 150; progress = prefs.getInt("sens", 35)
+                      setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                          override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
+                              val v = maxOf(5, p); sensLabel.text = "陀螺儀靈敏度：$v"; prefs.edit().putInt("sens", v).apply()
+                          }
+                          override fun onStartTrackingTouch(s: SeekBar?) {}
+                          override fun onStopTrackingTouch(s: SeekBar?) {}
+                      })
+                  }
+                  val invX = Switch(this).apply { text = "反轉左右方向 (X軸)"; isChecked = prefs.getBoolean("invertX", false); setOnCheckedChangeListener { _, c -> prefs.edit().putBoolean("invertX", c).apply() } }
+                  val invY = Switch(this).apply { text = "反轉上下方向 (Y軸)"; isChecked = prefs.getBoolean("invertY", false); setOnCheckedChangeListener { _, c -> prefs.edit().putBoolean("invertY", c).apply() } }
+                  val enable = Switch(this).apply { text = "啟用陀螺儀背景運作"; isChecked = prefs.getBoolean("enabled", true); setOnCheckedChangeListener { _, c -> prefs.edit().putBoolean("enabled", c).apply() } }
+                  val btn = Button(this).apply { text = "前往開啟「MC 陀螺儀瞄準」無障礙權限"; setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) } }
+
+                  layout.addView(sensLabel); layout.addView(sensSeek); layout.addView(invX); layout.addView(invY); layout.addView(enable); layout.addView(btn)
+                  setContentView(layout)
+              }
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/example/mcgyro/GyroAccessibilityService.kt
+          package com.example.mcgyro
+          import android.accessibilityservice.*
+          import android.content.Context
+          import android.graphics.Path
+          import android.hardware.*
+          import android.view.accessibility.AccessibilityEvent
+          import kotlin.math.abs
+
+          class GyroAccessibilityService : AccessibilityService(), SensorEventListener {
+              private lateinit var sensorManager: SensorManager
+              private var isSwiping = false
+
+              override fun onServiceConnected() {
+                  super.onServiceConnected()
+                  sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+                  sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let {
+                      sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+                  }
+              }
+
+              override fun onSensorChanged(event: SensorEvent?) {
+                  if (event == null || event.sensor.type != Sensor.TYPE_GYROSCOPE || isSwiping) return
+                  val prefs = getSharedPreferences("gyro_prefs", Context.MODE_PRIVATE)
+                  if (!prefs.getBoolean("enabled", true)) return
+
+                  val sens = prefs.getInt("sens", 35).toFloat()
+                  val invX = if (prefs.getBoolean("invertX", false)) -1f else 1f
+                  val invY = if (prefs.getBoolean("invertY", false)) -1f else 1f
+                  var dx = event.values[0] * invX
+                  var dy = event.values[1] * invY
+
+                  if (abs(dx) < 0.03f) dx = 0f
+                  if (abs(dy) < 0.03f) dy = 0f
+                  if (dx != 0f || dy != 0f) performAimSwipe(dx * sens, dy * sens)
+              }
+
+              private fun performAimSwipe(dx: Float, dy: Float) {
+                  isSwiping = true
+                  val m = resources.displayMetrics
+                  val ax = m.widthPixels * 0.75f
+                  val ay = m.heightPixels * 0.45f
+                  val path = Path().apply { moveTo(ax, ay); lineTo(ax + dx, ay + dy) }
+                  val gesture = GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(path, 0, 16)).build()
+                  dispatchGesture(gesture, object : GestureResultCallback() {
+                      override fun onCompleted(g: GestureDescription?) { isSwiping = false }
+                      override fun onCancelled(g: GestureDescription?) { isSwiping = false }
+                  }, null)
+              }
+
+              override fun onAccuracyChanged(s: Sensor?, a: Int) {}
+              override fun onAccessibilityEvent(e: AccessibilityEvent?) {}
+              override fun onDestroy() { super.onDestroy(); sensorManager.unregisterListener(this) }
+          }
+          EOF
+
+      - run: gradle assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MCGyro-App-APK
+          path: app/build/outputs/apk/debug/*.apk
