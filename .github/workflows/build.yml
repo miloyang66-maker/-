@@ -8,6 +8,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.4'
@@ -191,6 +192,7 @@ jobs:
           }
           EOF
 
+      - run: yes | sdkmanager --licenses > /dev/null 2>&1 || true
       - run: gradle assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
