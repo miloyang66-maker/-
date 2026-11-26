@@ -23,7 +23,7 @@ jobs:
           printf '%s\n' '<?xml version="1.0" encoding="utf-8"?>' '<resources><string name="app_name">MC 陀螺儀瞄準</string><string name="service_desc">MC 陀螺儀體感瞄準輔助</string></resources>' > app/src/main/res/values/strings.xml
           echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPG1hbmlmZXN0IHhtbG5zOmFuZHJvaWQ9Imh0dHA6Ly9zY2hlbWFzLmFuZHJvaWQuY29tL2Fway9yZXMvYW5kcm9pZCI+CiAgICA8YXBwbGljYXRpb24gYW5kcm9pZDpsYWJlbD0iQHN0cmluZy9hcHBfbmFtZSIgYW5kcm9pZDp0aGVtZT0iQHN0eWxlL1RoZW1lLkFwcENvbXBhdC5EYXlOaWdodC5EYXJrQWN0aW9uQmFyIj4KICAgICAgICA8YWN0aXZpdHkgYW5kcm9pZDpuYW1lPSIuTWFpbkFjdGl2aXR5IiBhbmRyb2lkOmV4cG9ydGVkPSJ0cnVlIj4KICAgICAgICAgICAgPGludGVudC1maWx0ZXI+CiAgICAgICAgICAgICAgICA8YWN0aW9uIGFuZHJvaWQ6bmFtZT0iYW5kcm9pZC5pbnRlbnQuYWN0aW9uLk1BSU4iIC8+CiAgICAgICAgICAgICAgICA8Y2F0ZWdvcnkgYW5kcm9pZDpuYW1lPSJhbmRyb2lkLmludGVudC5jYXRlZ29yeS5MQVVOQ0hFUiIgLz4KICAgICAgICAgICAgPC9pbnRlbnQtZmlsdGVyPgogICAgICAgIDwvYWN0aXZpdHk+CiAgICAgICAgPHNlcnZpY2UgYW5kcm9pZDpuYW1lPSIuR3lyb0FjY2Vzc2liaWxpdHlTZXJ2aWNlIiBhbmRyb2lkOnBlcm1pc3Npb249ImFuZHJvaWQucGVybWlzc2lvbi5CSU5EX0FDQ0VTU0lCSUxJVFlfU0VSVklDRSIgYW5kcm9pZDpleHBvcnRlZD0idHJ1ZSI+CiAgICAgICAgICAgIDxpbnRlbnQtZmlsdGVyPgogICAgICAgICAgICAgICAgPGFjdGlvbiBhbmRyb2lkOm5hbWU9ImFuZHJvaWQuYWNjZXNzaWJpbGl0eXNlcnZpY2UuQWNjZXNzaWJpbGl0eVNlcnZpY2UiIC8+CiAgICAgICAgICAgIDwvaW50ZW50LWZpbHRlcj4KICAgICAgICAgICAgPG1ldGEtZGF0YSBhbmRyb2lkOm5hbWU9ImFuZHJvaWQuYWNjZXNzaWJpbGl0eXNlcnZpY2UiIGFuZHJvaWQ6cmVzb3VyY2U9IkB4bWwvZ3lyb19zZXJ2aWNlX2NvbmZpZyIgLz4KICAgICAgICA8L3NlcnZpY2U+CiAgICA8L2FwcGxpY2F0aW9uPgo8L21hbmlmZXN0Pgo=" | base64 -d > app/src/main/AndroidManifest.xml
           echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPGFjY2Vzc2liaWxpdHktc2VydmljZSB4bWxuczphbmRyb2lkPSJodHRwOi8vc2NoZW1hcy5hbmRyb2lkLmNvbS9hcGsvcmVzL2FuZHJvaWQiCiAgICBhbmRyb2lkOmRlc2NyaXB0aW9uPSJAc3RyaW5nL3NlcnZpY2VfZGVzYyIKICAgIGFuZHJvaWQ6YWNjZXNzaWJpbGl0eUV2ZW50VHlwZXM9InR5cGVXaW5kb3dTdGF0ZUNoYW5nZWQiCiAgICBhbmRyb2lkOmFjY2Vzc2liaWxpdHlGZWVkYmFja1R5cGU9ImZlZWRiYWNrR2VuZXJpYyIKICAgIGFuZHJvaWQ6Y2FuUGVyZm9ybUdlc3R1cmVzPSJ0cnVlIgogICAgYW5kcm9pZDpub3RpZmljYXRpb25UaW1lb3V0PSI1MCIgLz4K" | base64 -d > app/src/main/res/xml/gyro_service_config.xml
-      - name: Generate Pulse Multi-Touch Kotlin and Build
+      - name: Generate Dual-Stroke Continuous Build
         run: |
           cat << 'EOF' > app/src/main/java/com/example/mcgyro/MainActivity.kt
           package com.example.mcgyro
@@ -33,42 +33,72 @@ jobs:
                   super.onCreate(savedInstanceState)
                   val prefs = getSharedPreferences("gyro_prefs", Context.MODE_PRIVATE)
                   val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(60, 60, 60, 60) }
-                  val sensLabel = TextView(this).apply { text = "陀螺儀靈敏度：${prefs.getInt("sens", 65)}"; textSize = 18f }
-                  val sensSeek = SeekBar(this).apply { max = 250; progress = prefs.getInt("sens", 65); setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) { val v = maxOf(10, p); sensLabel.text = "陀螺儀靈敏度：$v"; prefs.edit().putInt("sens", v).apply() }; override fun onStartTrackingTouch(s: SeekBar?) {}; override fun onStopTrackingTouch(s: SeekBar?) {} }) }
+                  val sensLabel = TextView(this).apply { text = "陀螺儀靈敏度：${prefs.getInt("sens", 55)}"; textSize = 18f }
+                  val sensSeek = SeekBar(this).apply { max = 200; progress = prefs.getInt("sens", 55); setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) { val v = maxOf(10, p); sensLabel.text = "陀螺儀靈敏度：$v"; prefs.edit().putInt("sens", v).apply() }; override fun onStartTrackingTouch(s: SeekBar?) {}; override fun onStopTrackingTouch(s: SeekBar?) {} }) }
                   val invX = Switch(this).apply { text = "反轉左右方向 (X軸)"; isChecked = prefs.getBoolean("invertX", false); setOnCheckedChangeListener { _, c -> prefs.edit().putBoolean("invertX", c).apply() } }
                   val invY = Switch(this).apply { text = "反轉上下方向 (Y軸)"; isChecked = prefs.getBoolean("invertY", false); setOnCheckedChangeListener { _, c -> prefs.edit().putBoolean("invertY", c).apply() } }
+                  val autoMove = Switch(this).apply { text = "轉頭時自動輔助按住前進鍵"; isChecked = prefs.getBoolean("autoMove", false); setOnCheckedChangeListener { _, c -> prefs.edit().putBoolean("autoMove", c).apply() } }
                   val enable = Switch(this).apply { text = "啟用陀螺儀背景運作"; isChecked = prefs.getBoolean("enabled", true); setOnCheckedChangeListener { _, c -> prefs.edit().putBoolean("enabled", c).apply() } }
                   val btn = Button(this).apply { text = "前往開啟「MC 陀螺儀瞄準」無障礙權限"; setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) } }
-                  layout.addView(sensLabel); layout.addView(sensSeek); layout.addView(invX); layout.addView(invY); layout.addView(enable); layout.addView(btn); setContentView(layout)
+                  layout.addView(sensLabel); layout.addView(sensSeek); layout.addView(invX); layout.addView(invY); layout.addView(autoMove); layout.addView(enable); layout.addView(btn); setContentView(layout)
               }
           }
           EOF
           cat << 'EOF' > app/src/main/java/com/example/mcgyro/GyroAccessibilityService.kt
           package com.example.mcgyro
-          import android.accessibilityservice.*; import android.content.Context; import android.graphics.Path; import android.hardware.*; import android.os.SystemClock; import android.view.accessibility.AccessibilityEvent; import kotlin.math.abs
+          import android.accessibilityservice.*; import android.content.Context; import android.graphics.*; import android.hardware.*; import android.os.Build; import android.view.*; import android.view.accessibility.AccessibilityEvent; import kotlin.math.abs
           class GyroAccessibilityService : AccessibilityService(), SensorEventListener {
-              private lateinit var sensorManager: SensorManager; private var isSwiping = false; private var lastReleaseTime = 0L; private var accX = 0f; private var accY = 0f
-              override fun onServiceConnected() { super.onServiceConnected(); sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager; sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) } }
+              private lateinit var sensorManager: SensorManager; private var isSwiping = false
+              private var curX = 0f; private var curY = 0f; private var aimStroke: GestureDescription.StrokeDescription? = null; private var moveStroke: GestureDescription.StrokeDescription? = null
+              private var idleCount = 0; private var touchX = -1f; private var touchY = -1f; private var overlayView: View? = null
+              override fun onServiceConnected() {
+                  super.onServiceConnected()
+                  sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+                  sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
+                  setupTouchDetector()
+              }
+              private fun setupTouchDetector() {
+                  val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                  val m = resources.displayMetrics
+                  overlayView = object : View(this) {
+                      override fun onTouchEvent(e: MotionEvent): Boolean {
+                          if (e.actionMasked == MotionEvent.ACTION_DOWN || e.actionMasked == MotionEvent.ACTION_MOVE) { touchX = e.rawX; touchY = e.rawY }
+                          else if (e.actionMasked == MotionEvent.ACTION_UP || e.actionMasked == MotionEvent.ACTION_CANCEL) { touchX = -1f; touchY = -1f; moveStroke = null }
+                          return false
+                      }
+                  }
+                  val params = WindowManager.LayoutParams((m.widthPixels * 0.35f).toInt(), (m.heightPixels * 0.55f).toInt(), WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH, PixelFormat.TRANSLUCENT).apply { gravity = Gravity.BOTTOM or Gravity.START }
+                  try { wm.addView(overlayView, params) } catch (_: Exception) {}
+              }
               override fun onSensorChanged(event: SensorEvent?) {
-                  if (event == null || event.sensor.type != Sensor.TYPE_GYROSCOPE) return
+                  if (event == null || event.sensor.type != Sensor.TYPE_GYROSCOPE || isSwiping) return
                   val prefs = getSharedPreferences("gyro_prefs", Context.MODE_PRIVATE); if (!prefs.getBoolean("enabled", true)) return
-                  val sens = prefs.getInt("sens", 65).toFloat(); val invX = if (prefs.getBoolean("invertX", false)) -1f else 1f; val invY = if (prefs.getBoolean("invertY", false)) -1f else 1f
+                  val sens = prefs.getInt("sens", 55).toFloat(); val invX = if (prefs.getBoolean("invertX", false)) -1f else 1f; val invY = if (prefs.getBoolean("invertY", false)) -1f else 1f
                   var dx = event.values.getOrElse(0) { 0f } * invX; var dy = event.values.getOrElse(1) { 0f } * invY
                   if (abs(dx) < 0.03f) dx = 0f; if (abs(dy) < 0.03f) dy = 0f
-                  if (dx != 0f || dy != 0f) { accX += dx * sens * 0.45f; accY += dy * sens * 0.45f }
-                  val now = SystemClock.uptimeMillis()
-                  if (!isSwiping && (now - lastReleaseTime) >= 14L && (abs(accX) >= 1.5f || abs(accY) >= 1.5f)) {
-                      val moveX = accX.coerceIn(-220f, 220f); val moveY = accY.coerceIn(-160f, 160f); accX = 0f; accY = 0f
-                      performPulseSwipe(moveX, moveY)
-                  }
+                  if (dx == 0f && dy == 0f) { idleCount++; if (idleCount > 10) { aimStroke = null; moveStroke = null }; return }
+                  idleCount = 0; performDualContinuousDrag(dx * sens, dy * sens, prefs.getBoolean("autoMove", false))
               }
-              private fun performPulseSwipe(dx: Float, dy: Float) {
-                  isSwiping = true; val m = resources.displayMetrics; val ax = m.widthPixels * 0.72f; val ay = m.heightPixels * 0.48f
-                  val path = Path().apply { moveTo(ax, ay); lineTo(ax + dx, ay + dy) }
-                  val gesture = GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(path, 0, 38)).build()
-                  dispatchGesture(gesture, object : GestureResultCallback() { override fun onCompleted(g: GestureDescription?) { isSwiping = false; lastReleaseTime = SystemClock.uptimeMillis() }; override fun onCancelled(g: GestureDescription?) { isSwiping = false; lastReleaseTime = SystemClock.uptimeMillis() } }, null)
+              private fun performDualContinuousDrag(dx: Float, dy: Float, autoMove: Boolean) {
+                  val m = resources.displayMetrics; val minX = m.widthPixels * 0.55f; val maxX = m.widthPixels * 0.90f; val minY = m.heightPixels * 0.20f; val maxY = m.heightPixels * 0.80f
+                  if (aimStroke == null || curX + dx !in minX..maxX || curY + dy !in minY..maxY) { curX = m.widthPixels * 0.72f; curY = m.heightPixels * 0.50f; aimStroke = null; moveStroke = null }
+                  val nextX = curX + dx; val nextY = curY + dy; val aimPath = Path().apply { moveTo(curX, curY); lineTo(nextX, nextY) }
+                  val newAim = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      if (aimStroke == null) GestureDescription.StrokeDescription(aimPath, 0, 32, true) else aimStroke!!.continueStroke(aimPath, 0, 32, true)
+                  } else { GestureDescription.StrokeDescription(aimPath, 0, 45) }
+                  curX = nextX; curY = nextY; aimStroke = newAim; isSwiping = true
+                  val builder = GestureDescription.Builder().addStroke(newAim)
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && (autoMove || touchX > 0f)) {
+                      val mx = if (touchX > 0f) touchX else m.widthPixels * 0.16f
+                      val my = if (touchY > 0f) touchY else m.heightPixels * 0.62f
+                      val movePath = Path().apply { moveTo(mx, my); lineTo(mx + 1f, my) }
+                      val newMove = if (moveStroke == null) GestureDescription.StrokeDescription(movePath, 0, 32, true) else moveStroke!!.continueStroke(movePath, 0, 32, true)
+                      moveStroke = newMove; builder.addStroke(newMove)
+                  } else { moveStroke = null }
+                  dispatchGesture(builder.build(), object : GestureResultCallback() { override fun onCompleted(g: GestureDescription?) { isSwiping = false }; override fun onCancelled(g: GestureDescription?) { isSwiping = false; aimStroke = null; moveStroke = null } }, null)
               }
-              override fun onAccuracyChanged(s: Sensor?, a: Int) {}; override fun onAccessibilityEvent(e: AccessibilityEvent?) {}; override fun onInterrupt() {}; override fun onDestroy() { super.onDestroy(); sensorManager.unregisterListener(this) }
+              override fun onAccuracyChanged(s: Sensor?, a: Int) {}; override fun onAccessibilityEvent(e: AccessibilityEvent?) {}; override fun onInterrupt() { aimStroke = null; moveStroke = null }
+              override fun onDestroy() { super.onDestroy(); sensorManager.unregisterListener(this); overlayView?.let { try { (getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(it) } catch (_: Exception) {} } }
           }
           EOF
           gradle assembleDebug --no-daemon --warning-mode none
