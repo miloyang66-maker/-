@@ -21,7 +21,7 @@ jobs:
               printf "\n84831b9409646a918e30573bab4c9c91346d8abd\n" > "$sdk_dir/licenses/android-sdk-preview-license"
             fi
           done
-      - name: Generate Full Android Project
+      - name: Generate Project
         run: |
           mkdir -p app/src/main/res/xml app/src/main/res/values app/src/main/java/com/example/mcgyro
           printf '%s\n' 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' 'android.useAndroidX=true' 'android.enableJetifier=true' > gradle.properties
@@ -33,80 +33,42 @@ jobs:
           echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPGFjY2Vzc2liaWxpdHktc2VydmljZSB4bWxuczphbmRyb2lkPSJodHRwOi8vc2NoZW1hcy5hbmRyb2lkLmNvbS9hcGsvcmVzL2FuZHJvaWQiCiAgICBhbmRyb2lkOmRlc2NyaXB0aW9uPSJAc3RyaW5nL3NlcnZpY2VfZGVzYyIKICAgIGFuZHJvaWQ6YWNjZXNzaWJpbGl0eUV2ZW50VHlwZXM9InR5cGVXaW5kb3dTdGF0ZUNoYW5nZWQiCiAgICBhbmRyb2lkOmFjY2Vzc2liaWxpdHlGZWVkYmFja1R5cGU9ImZlZWRiYWNrR2VuZXJpYyIKICAgIGFuZHJvaWQ6Y2FuUGVyZm9ybUdlc3R1cmVzPSJ0cnVlIgogICAgYW5kcm9pZDpub3RpZmljYXRpb25UaW1lb3V0PSI1MCIgLz4K" | base64 -d > app/src/main/res/xml/gyro_service_config.xml
           cat << 'EOF' > app/src/main/java/com/example/mcgyro/MainActivity.kt
           package com.example.mcgyro
-          import android.content.*
-          import android.os.Bundle
-          import android.provider.Settings
-          import android.widget.*
-          import androidx.appcompat.app.AppCompatActivity
+          import android.content.*; import android.os.Bundle; import android.provider.Settings; import android.widget.*; import androidx.appcompat.app.AppCompatActivity
           class MainActivity : AppCompatActivity() {
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
                   val prefs = getSharedPreferences("gyro_prefs", Context.MODE_PRIVATE)
                   val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(60, 60, 60, 60) }
                   val sensLabel = TextView(this).apply { text = "陀螺儀靈敏度：${prefs.getInt("sens", 35)}"; textSize = 18f }
-                  val sensSeek = SeekBar(this).apply {
-                      max = 150; progress = prefs.getInt("sens", 35)
-                      setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                          override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) { val v = maxOf(5, p); sensLabel.text = "陀螺儀靈敏度：$v"; prefs.edit().putInt("sens", v).apply() }
-                          override fun onStartTrackingTouch(s: SeekBar?) {}
-                          override fun onStopTrackingTouch(s: SeekBar?) {}
-                      })
-                  }
+                  val sensSeek = SeekBar(this).apply { max = 150; progress = prefs.getInt("sens", 35); setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener { override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) { val v = maxOf(5, p); sensLabel.text = "陀螺儀靈敏度：$v"; prefs.edit().putInt("sens", v).apply() }; override fun onStartTrackingTouch(s: SeekBar?) {}; override fun onStopTrackingTouch(s: SeekBar?) {} }) }
                   val invX = Switch(this).apply { text = "反轉左右方向 (X軸)"; isChecked = prefs.getBoolean("invertX", false); setOnCheckedChangeListener { _, c -> prefs.edit().putBoolean("invertX", c).apply() } }
                   val invY = Switch(this).apply { text = "反轉上下方向 (Y軸)"; isChecked = prefs.getBoolean("invertY", false); setOnCheckedChangeListener { _, c -> prefs.edit().putBoolean("invertY", c).apply() } }
                   val enable = Switch(this).apply { text = "啟用陀螺儀背景運作"; isChecked = prefs.getBoolean("enabled", true); setOnCheckedChangeListener { _, c -> prefs.edit().putBoolean("enabled", c).apply() } }
                   val btn = Button(this).apply { text = "前往開啟「MC 陀螺儀瞄準」無障礙權限"; setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) } }
-                  layout.addView(sensLabel); layout.addView(sensSeek); layout.addView(invX); layout.addView(invY); layout.addView(enable); layout.addView(btn)
-                  setContentView(layout)
+                  layout.addView(sensLabel); layout.addView(sensSeek); layout.addView(invX); layout.addView(invY); layout.addView(enable); layout.addView(btn); setContentView(layout)
               }
           }
           EOF
           cat << 'EOF' > app/src/main/java/com/example/mcgyro/GyroAccessibilityService.kt
           package com.example.mcgyro
-          import android.accessibilityservice.*
-          import android.content.Context
-          import android.graphics.Path
-          import android.hardware.*
-          import android.view.accessibility.AccessibilityEvent
-          import kotlin.math.abs
+          import android.accessibilityservice.*; import android.content.Context; import android.graphics.Path; import android.hardware.*; import android.view.accessibility.AccessibilityEvent; import kotlin.math.abs
           class GyroAccessibilityService : AccessibilityService(), SensorEventListener {
-              private lateinit var sensorManager: SensorManager
-              private var isSwiping = false
-              override fun onServiceConnected() {
-                  super.onServiceConnected()
-                  sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-                  sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
-              }
+              private lateinit var sensorManager: SensorManager; private var isSwiping = false
+              override fun onServiceConnected() { super.onServiceConnected(); sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager; sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) } }
               override fun onSensorChanged(event: SensorEvent?) {
                   if (event == null || event.sensor.type != Sensor.TYPE_GYROSCOPE || isSwiping) return
-                  val prefs = getSharedPreferences("gyro_prefs", Context.MODE_PRIVATE)
-                  if (!prefs.getBoolean("enabled", true)) return
-                  val sens = prefs.getInt("sens", 35).toFloat()
-                  val invX = if (prefs.getBoolean("invertX", false)) -1f else 1f
-                  val invY = if (prefs.getBoolean("invertY", false)) -1f else 1f
-                  val rawX = event.values.getOrElse(0) { 0f }
-                  val rawY = event.values.getOrElse(1) { 0f }
-                  var dx = rawX * invX
-                  var dy = rawY * invY
-                  if (abs(dx) < 0.03f) dx = 0f
-                  if (abs(dy) < 0.03f) dy = 0f
-                  if (dx != 0f || dy != 0f) performAimSwipe(dx * sens, dy * sens)
+                  val prefs = getSharedPreferences("gyro_prefs", Context.MODE_PRIVATE); if (!prefs.getBoolean("enabled", true)) return
+                  val sens = prefs.getInt("sens", 35).toFloat(); val invX = if (prefs.getBoolean("invertX", false)) -1f else 1f; val invY = if (prefs.getBoolean("invertY", false)) -1f else 1f
+                  var dx = event.values.getOrElse(0) { 0f } * invX; var dy = event.values.getOrElse(1) { 0f } * invY
+                  if (abs(dx) < 0.03f) dx = 0f; if (abs(dy) < 0.03f) dy = 0f; if (dx != 0f || dy != 0f) performAimSwipe(dx * sens, dy * sens)
               }
               private fun performAimSwipe(dx: Float, dy: Float) {
-                  isSwiping = true
-                  val m = resources.displayMetrics
-                  val ax = m.widthPixels * 0.75f
-                  val ay = m.heightPixels * 0.45f
+                  isSwiping = true; val m = resources.displayMetrics; val ax = m.widthPixels * 0.75f; val ay = m.heightPixels * 0.45f
                   val path = Path().apply { moveTo(ax, ay); lineTo(ax + dx, ay + dy) }
                   val gesture = GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(path, 0, 16)).build()
-                  dispatchGesture(gesture, object : GestureResultCallback() {
-                      override fun onCompleted(g: GestureDescription?) { isSwiping = false }
-                      override fun onCancelled(g: GestureDescription?) { isSwiping = false }
-                  }, null)
+                  dispatchGesture(gesture, object : GestureResultCallback() { override fun onCompleted(g: GestureDescription?) { isSwiping = false }; override fun onCancelled(g: GestureDescription?) { isSwiping = false } }, null)
               }
-              override fun onAccuracyChanged(s: Sensor?, a: Int) {}
-              override fun onAccessibilityEvent(e: AccessibilityEvent?) {}
-              override fun onDestroy() { super.onDestroy(); sensorManager.unregisterListener(this) }
+              override fun onAccuracyChanged(s: Sensor?, a: Int) {}; override fun onAccessibilityEvent(e: AccessibilityEvent?) {}; override fun onInterrupt() {}; override fun onDestroy() { super.onDestroy(); sensorManager.unregisterListener(this) }
           }
           EOF
       - name: Build Debug APK
